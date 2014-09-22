@@ -74,6 +74,11 @@ public class TinyGController extends AbstractController {
     protected void pauseStreamingEvent() throws IOException {
         throw new UnsupportedOperationException("Not supported yet.");
     }
+    
+        @Override
+    protected void pingStatus() throws IOException {
+           throw new UnsupportedOperationException("Not supported yet.");
+    }
 
     @Override
     protected void resumeStreamingEvent() throws IOException {
