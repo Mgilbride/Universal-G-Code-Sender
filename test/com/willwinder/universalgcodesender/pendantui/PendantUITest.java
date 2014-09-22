@@ -142,6 +142,10 @@ public class PendantUITest {
             @Override
             protected void pauseStreamingEvent() throws IOException {
             }
+            
+            @Override
+            protected void pingStatus() throws IOException {
+            }
 
             @Override
             protected void isReadyToStreamFileEvent() throws Exception {
