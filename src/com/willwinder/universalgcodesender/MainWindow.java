@@ -77,6 +77,8 @@ implements KeyListener, ControllerListener, MainWindowAPI {
     private static String VERSION = Version.getVersion() + " " + Version.getTimestamp();
     private PendantUI pendantUI;
     private Settings settings;
+    private static String CurrentState;
+    
     
     /** Creates new form MainWindow */
     public MainWindow() {
@@ -499,6 +501,11 @@ implements KeyListener, ControllerListener, MainWindowAPI {
 
         arrowMovementEnabled.setText("Enable Keyboard Movement");
         arrowMovementEnabled.setEnabled(false);
+        arrowMovementEnabled.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                arrowMovementEnabledActionPerformed(evt);
+            }
+        });
 
         zMinusButton.setText("Z-");
         zMinusButton.setEnabled(false);
@@ -559,7 +566,7 @@ implements KeyListener, ControllerListener, MainWindowAPI {
                     .add(yPlusButton, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, 50, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
                     .add(yMinusButton, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, 50, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
-                .add(xPlusButton, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, 50, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
+                .add(xPlusButton, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 50, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(org.jdesktop.layout.LayoutStyle.UNRELATED)
                 .add(movementButtonPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
                     .add(org.jdesktop.layout.GroupLayout.TRAILING, zMinusButton, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, 50, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
@@ -965,7 +972,7 @@ implements KeyListener, ControllerListener, MainWindowAPI {
                 .add(connectionPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.BASELINE)
                     .add(firmwareLabel)
                     .add(firmwareComboBox, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE))
-                .addContainerGap(38, Short.MAX_VALUE))
+                .addContainerGap(45, Short.MAX_VALUE))
         );
 
         showVerboseOutputCheckBox.setText("Show verbose output");
@@ -1108,7 +1115,7 @@ implements KeyListener, ControllerListener, MainWindowAPI {
                         .add(statusPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.BASELINE)
                             .add(machinePositionZLabel)
                             .add(machinePositionZValueLabel))))
-                .addContainerGap(19, Short.MAX_VALUE))
+                .addContainerGap(23, Short.MAX_VALUE))
         );
 
         settingsMenu.setText("Settings");
@@ -1862,6 +1869,10 @@ implements KeyListener, ControllerListener, MainWindowAPI {
         this.settings.setCustomGcode5(this.customGcodeText5.getText());
     }//GEN-LAST:event_customGcodeText5ActionPerformed
 
+    private void arrowMovementEnabledActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_arrowMovementEnabledActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_arrowMovementEnabledActionPerformed
+
     private void executeCustomGcode(String str)
     {
         str = str.replaceAll("(\\r\\n|\\n\\r|\\r|\\n)", "");
@@ -1890,6 +1901,14 @@ implements KeyListener, ControllerListener, MainWindowAPI {
     /**
      * @param args the command line arguments
      */
+    
+    
+    //*************************************************************************************************
+    //*************************************************************************************************
+    //*************************************************************************************************
+    //*************************************************************************************************
+    //*************************************************************************************************
+    
     public static void main(String args[]) {
         
         /* Set the Nimbus look and feel */
@@ -2027,21 +2046,25 @@ implements KeyListener, ControllerListener, MainWindowAPI {
         KeyboardFocusManager.getCurrentKeyboardFocusManager()
             .addKeyEventDispatcher(new KeyEventDispatcher() {
                 @Override
+               
                 public boolean dispatchKeyEvent(KeyEvent e) {
                     // Check context.
                     if (((arrowMovementEnabled.isSelected()) &&
                             e.getID() == KeyEvent.KEY_PRESSED) &&
-                            xPlusButton.isEnabled()) {
+                            xPlusButton.isEnabled() && 
+                            !CurrentState.equals(Localization.getString("mainWindow.status.hold")) && 
+                            !CurrentState.equals(Localization.getString("mainWindow.status.queue"))) {
                         switch (e.getKeyCode()) {
-                            case KeyEvent.VK_RIGHT:
-                            case KeyEvent.VK_KP_RIGHT:
-                            case KeyEvent.VK_NUMPAD6:
+                            case KeyEvent.VK_RIGHT: // Keyboard move in x positive direction
+                            case KeyEvent.VK_KP_RIGHT:// Keyboard move in x positive direction
+                            case KeyEvent.VK_NUMPAD6:// Keyboard move in x positive direction  
+                                //Check for key release here? Check current key state?
                                 xPlusButtonActionPerformed(null);
                                 e.consume();
                                 return true;
-                            case KeyEvent.VK_LEFT:
-                            case KeyEvent.VK_KP_LEFT:
-                            case KeyEvent.VK_NUMPAD4:
+                            case KeyEvent.VK_LEFT:// Keyboard move in x negative direction
+                            case KeyEvent.VK_KP_LEFT:// Keyboard move in x negative direction
+                            case KeyEvent.VK_NUMPAD4:// Keyboard move in x negative direction
                                 xMinusButtonActionPerformed(null);
                                 e.consume();
                                 return true;
@@ -2091,7 +2114,177 @@ implements KeyListener, ControllerListener, MainWindowAPI {
                         }
                     }
                     
-                    return false;
+                    
+                    // Catch Release of Keyboard Jog Keys In Order to tighten up response and reduce coasting
+                    if (((arrowMovementEnabled.isSelected()) &&
+                            e.getID() == KeyEvent.KEY_RELEASED) &&
+                            xPlusButton.isEnabled()) {
+                        switch (e.getKeyCode()) {
+                            case KeyEvent.VK_RIGHT: // Keyboard Jog Released in X positive direction
+                            case KeyEvent.VK_KP_RIGHT:// Keyboard Jog Released in X positive direction
+                            case KeyEvent.VK_NUMPAD6:// Keyboard Jog Released in X positive direction
+                             
+                             // Issue feed hold command
+                             try {
+                                controller.pauseStreamingEvent();
+                             } catch (java.io.IOException ex){
+                                MainWindow.displayErrorDialog(ex.getMessage());
+                             }
+                             // Keep pinging controller status until status in Queue
+                             try{
+                                 while (!CurrentState.equals(Localization.getString("mainWindow.status.queue"))) {
+                                 controller.pingStatus();
+                                 }
+                             } catch (Exception ex) {
+                                 System.out.println(ex.getMessage());
+                             }
+   
+                             // Issue soft reset to clear GRBL command buffer 
+                             try {
+                                controller.issueSoftReset();
+                                } catch (Exception ex){
+                                MainWindow.displayErrorDialog(ex.getMessage());
+                             }
+ 
+                                e.consume(); //is this trying to consume keyboard events??
+                                return true;
+                            case KeyEvent.VK_LEFT:// Keyboard Jog Released in X negative direction
+                            case KeyEvent.VK_KP_LEFT:// Keyboard Jog Released in X negative direction
+                            case KeyEvent.VK_NUMPAD4:// Keyboard Jog Released in X negative direction
+                             
+                             // Issue feed hold command
+                             try {
+                                controller.pauseStreamingEvent();
+                             } catch (java.io.IOException ex){
+                                MainWindow.displayErrorDialog(ex.getMessage());
+                             }
+                             // Keep pinging controller status until status in Queue
+                             try{
+                                 while (!CurrentState.equals(Localization.getString("mainWindow.status.queue"))) {
+                                 controller.pingStatus();
+                                 }
+                             } catch (Exception ex) {
+                                 System.out.println(ex.getMessage());
+                             }
+   
+                             // Issue soft reset to clear GRBL command buffer 
+                             try {
+                                controller.issueSoftReset();
+                                } catch (Exception ex){
+                                MainWindow.displayErrorDialog(ex.getMessage());
+                             }
+                                 e.consume();
+                                return true;
+                            case KeyEvent.VK_UP: // Keyboard Jog Released in Y positive direction
+                            case KeyEvent.VK_KP_UP: // Keyboard Jog Released in Y positive direction
+                            case KeyEvent.VK_NUMPAD8: // Keyboard Jog Released in Y positive direction
+                             
+                             // Issue feed hold command
+                             try {
+                                controller.pauseStreamingEvent();
+                             } catch (java.io.IOException ex){
+                                MainWindow.displayErrorDialog(ex.getMessage());
+                             }
+                             // Keep pinging controller status until status in Queue
+                             try{
+                                 while (!CurrentState.equals(Localization.getString("mainWindow.status.queue"))) {
+                                 controller.pingStatus();
+                                 }
+                             } catch (Exception ex) {
+                                 System.out.println(ex.getMessage());
+                             }
+   
+                             // Issue soft reset to clear GRBL command buffer 
+                             try {
+                                controller.issueSoftReset();
+                                } catch (Exception ex){
+                                MainWindow.displayErrorDialog(ex.getMessage());
+                             }
+                                 e.consume();
+                                return true;
+                            case KeyEvent.VK_DOWN: // Keyboard Jog Released in Y negative direction
+                            case KeyEvent.VK_KP_DOWN: // Keyboard Jog Released in Y negative direction
+                            case KeyEvent.VK_NUMPAD2:  // Keyboard Jog Released in Y negative direction                                                                                                                  
+                             
+                             // Issue feed hold command
+                             try {
+                                controller.pauseStreamingEvent();
+                             } catch (java.io.IOException ex){
+                                MainWindow.displayErrorDialog(ex.getMessage());
+                             }
+                             // Keep pinging controller status until status in Queue
+                             try{
+                                 while (!CurrentState.equals(Localization.getString("mainWindow.status.queue"))) {
+                                 controller.pingStatus();
+                                 }
+                             } catch (Exception ex) {
+                                 System.out.println(ex.getMessage());
+                             }
+   
+                             // Issue soft reset to clear GRBL command buffer 
+                             try {
+                                controller.issueSoftReset();
+                                } catch (Exception ex){
+                                MainWindow.displayErrorDialog(ex.getMessage());
+                             }
+                                 e.consume();
+                                return true;
+                            case KeyEvent.VK_PAGE_UP: // Keyboard Jog Released in Z positive direction
+                            case KeyEvent.VK_NUMPAD9: // Keyboard Jog Released in Z positive direction
+                             
+                             // Issue feed hold command
+                             try {
+                                controller.pauseStreamingEvent();
+                             } catch (java.io.IOException ex){
+                                MainWindow.displayErrorDialog(ex.getMessage());
+                             }
+                             // Keep pinging controller status until status in Queue
+                             try{
+                                 while (!CurrentState.equals(Localization.getString("mainWindow.status.queue"))) {
+                                 controller.pingStatus();
+                                 }
+                             } catch (Exception ex) {
+                                 System.out.println(ex.getMessage());
+                             }
+   
+                             // Issue soft reset to clear GRBL command buffer 
+                             try {
+                                controller.issueSoftReset();
+                                } catch (Exception ex){
+                                MainWindow.displayErrorDialog(ex.getMessage());
+                             }
+                                 e.consume();
+                                return true;
+                            case KeyEvent.VK_PAGE_DOWN: // Keyboard Jog Released in Z negative direction
+                            case KeyEvent.VK_NUMPAD3: // Keyboard Jog Released in Z negative direction
+                             
+                             // Issue feed hold command
+                             try {
+                                controller.pauseStreamingEvent();
+                             } catch (java.io.IOException ex){
+                                MainWindow.displayErrorDialog(ex.getMessage());
+                             }
+                             // Keep pinging controller status until status in Queue
+                             try{
+                                 while (!CurrentState.equals(Localization.getString("mainWindow.status.queue"))) {
+                                 controller.pingStatus();
+                                 }
+                             } catch (Exception ex) {
+                                 System.out.println(ex.getMessage());
+                             }
+   
+                             // Issue soft reset to clear GRBL command buffer 
+                             try {
+                                controller.issueSoftReset();
+                                } catch (Exception ex){
+                                MainWindow.displayErrorDialog(ex.getMessage());
+                             }
+                                 e.consume();
+                                return true;
+                        }
+                    }
+                    
+                    return false;      
                 }
             });
     }
@@ -2674,6 +2867,7 @@ implements KeyListener, ControllerListener, MainWindowAPI {
     @Override
     public void statusStringListener(String state, Point3d machineCoord, Point3d workCoord) {
         this.activeStateValueLabel.setText( state );
+        CurrentState = state;
         this.setStatusColorForState( state );
         
         if (machineCoord != null) {
