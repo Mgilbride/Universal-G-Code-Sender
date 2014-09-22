@@ -144,6 +144,7 @@ public abstract class AbstractController implements SerialCommunicatorListener {
     protected void softReset() throws Exception {
         throw new Exception(Localization.getString("controller.exception.softreset"));
     }
+   
     
     /**
      * Listener event for status update values;
@@ -557,6 +558,8 @@ public abstract class AbstractController implements SerialCommunicatorListener {
         this.comm.pauseSend();
     }
     
+        abstract protected void pingStatus() throws IOException;
+            
     public void resumeStreaming() throws IOException {
         this.messageForConsole("\n**** Resuming file transfer. ****\n\n");
         resumeStreamingEvent();
