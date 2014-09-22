@@ -131,7 +131,7 @@ public class GrblController extends AbstractController {
             this.beginPollingPosition();
             
             Logger.getLogger(GrblController.class.getName()).log(Level.CONFIG, 
-                    "{0} = {1}{2}", new Object[]{Localization.getString("controller.log.version"), this.grblVersion, this.grblVersionLetter});
+                     "{0} = {1}{2}", new Object[]{Localization.getString("controller.log.version"), this.grblVersion, this.grblVersionLetter});
             Logger.getLogger(GrblController.class.getName()).log(Level.CONFIG, 
                     "{0} = {1}", new Object[]{Localization.getString("controller.log.realtime"), this.realTimeCapable});
         }
@@ -155,6 +155,13 @@ public class GrblController extends AbstractController {
     protected void pauseStreamingEvent() throws IOException {
         if (this.realTimeCapable) {
             this.comm.sendByteImmediately(GrblUtils.GRBL_PAUSE_COMMAND);
+        }
+    }
+    
+    @Override
+    protected void pingStatus() throws IOException {
+        if (this.realTimeCapable) {
+            this.comm.sendByteImmediately(GrblUtils.GRBL_STATUS_COMMAND);
         }
     }
     
@@ -327,6 +334,8 @@ public class GrblController extends AbstractController {
         }
     }
         
+ 
+
     /************
      * Helpers.
      ************
